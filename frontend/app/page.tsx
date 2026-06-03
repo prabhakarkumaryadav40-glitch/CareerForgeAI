@@ -1,3 +1,4 @@
+import Link from "next/link";
 export default function Home() {
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -27,15 +28,19 @@ export default function Home() {
           for students and freshers.
         </p>
 
-        <div className="flex justify-center gap-4">
-          <button className="bg-blue-600 hover:bg-blue-700 px-8 py-4 rounded-xl font-semibold">
-            Get Started Free
-          </button>
+       <div className="flex justify-center gap-4">
+  <Link href="/register">
+    <button className="bg-blue-600 hover:bg-blue-700 px-8 py-4 rounded-xl font-semibold">
+      Get Started Free
+    </button>
+  </Link>
 
-          <button className="border border-slate-700 px-8 py-4 rounded-xl">
-            Watch Demo
-          </button>
-        </div>
+  <Link href="/login">
+    <button className="border border-slate-700 px-8 py-4 rounded-xl">
+      Login
+    </button>
+  </Link>
+</div>
       </section>
 
       {/* Features */}
