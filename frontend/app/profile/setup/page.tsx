@@ -7,6 +7,9 @@ export default function ProfileSetupPage() {
   const [targetRole, setTargetRole] = useState("");
   const [skills, setSkills] = useState("");
 
+  const [aiRoadmap, setAiRoadmap] = useState("");
+const [loading, setLoading] = useState(false);
+
   const calculateScore = () => {
     const skillList = skills
       .toLowerCase()
@@ -83,7 +86,17 @@ export default function ProfileSetupPage() {
         <h1 className="text-3xl font-bold mb-6 text-center">
           Profile Setup
         </h1>
+{loading && (
+  <p className="text-yellow-400">
+    Generating AI roadmap...
+  </p>
+)}
 
+{aiRoadmap && (
+  <div className="bg-slate-700 p-4 rounded-lg mb-4 whitespace-pre-wrap">
+    {aiRoadmap}
+  </div>
+)}
         <div className="grid gap-4">
           <input
             type="text"
@@ -126,7 +139,25 @@ export default function ProfileSetupPage() {
           />
 
           <button
-  onClick={() => {
+ onClick={async () => {
+  setLoading(true);
+
+  try {
+    const response = await fetch("/api/generate-roadmap", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        targetRole,
+        skills,
+      }),
+    });
+
+    const data = await response.json();
+
+    setAiRoadmap(data.roadmap);
+
     localStorage.setItem("targetRole", targetRole);
     localStorage.setItem("skills", skills);
     localStorage.setItem(
@@ -135,7 +166,12 @@ export default function ProfileSetupPage() {
     );
 
     setShowRoadmap(true);
-  }}
+  } catch (error) {
+    console.error(error);
+  }
+
+  setLoading(false);
+}}
   className="bg-blue-600 p-3 rounded-lg font-semibold"
 >
   Generate My Career Roadmap
