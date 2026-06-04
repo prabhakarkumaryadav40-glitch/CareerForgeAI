@@ -126,11 +126,20 @@ export default function ProfileSetupPage() {
           />
 
           <button
-            onClick={() => setShowRoadmap(true)}
-            className="bg-blue-600 p-3 rounded-lg font-semibold"
-          >
-            Generate My Career Roadmap
-          </button>
+  onClick={() => {
+    localStorage.setItem("targetRole", targetRole);
+    localStorage.setItem("skills", skills);
+    localStorage.setItem(
+      "score",
+      calculateScore().toString()
+    );
+
+    setShowRoadmap(true);
+  }}
+  className="bg-blue-600 p-3 rounded-lg font-semibold"
+>
+  Generate My Career Roadmap
+</button>
 
           {showRoadmap && (
             <div className="mt-6 bg-green-900 p-4 rounded-xl text-center">
