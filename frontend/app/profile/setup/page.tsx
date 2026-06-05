@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import RoadmapCards from "@/components/RoadmapCards";
 
 export default function ProfileSetupPage() {
   const [showRoadmap, setShowRoadmap] = useState(false);
@@ -92,11 +93,7 @@ const [loading, setLoading] = useState(false);
   </p>
 )}
 
-{aiRoadmap && (
-  <div className="bg-slate-700 p-4 rounded-lg mb-4 whitespace-pre-wrap">
-    {aiRoadmap}
-  </div>
-)}
+
         <div className="grid gap-4">
           <input
             type="text"
@@ -188,6 +185,9 @@ const [loading, setLoading] = useState(false);
               </p>
             </div>
           )}
+          {aiRoadmap && (
+  <RoadmapCards roadmap={aiRoadmap} />
+)}
 
           {showRoadmap && (
             <div className="mt-8 bg-slate-800 p-6 rounded-xl">
