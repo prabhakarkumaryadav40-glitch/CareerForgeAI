@@ -246,27 +246,33 @@ Install dependencies
 npm install
 ```
 
-Create environment file
+## 🔑 Environment Variables
+
+Create a `.env.local` file in the project root and add the following:
 
 ```env
-OPENAI_API_KEY=
+OPENAI_API_KEY=your_openai_api_key
 
-NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ```
 
-Run development server
+> **Important:** Never commit your `.env.local` file or expose your API keys publicly.
+
+## ▶️ Run the Development Server
 
 ```bash
+npm install
 npm run dev
 ```
 
-Open
+Open http://localhost:3000 in your browser.
 
-```
-http://localhost:3000
-```
+
+```bash
+
 
 ---
 
