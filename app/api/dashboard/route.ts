@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
     const roadmaps = await supabase
       .from("roadmaps")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("user_id", userId)
       .order("created_at", {
         ascending: false,
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
     const interviews = await supabase
       .from("interview_results")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("user_id", userId)
       .order("created_at", {
         ascending: false,
@@ -55,33 +55,50 @@ export async function POST(req: Request) {
 
 
 
-    const tasks = await supabase
+  const latestRoadmap = roadmaps.data?.[0];
+
+const tasks = latestRoadmap
+  ? await supabase
       .from("roadmap_tasks")
       .select("*")
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .eq("roadmap_id", latestRoadmap.id)
+  : { data: [] };
 
+const completedTasks =
+  tasks.data?.filter(
+    (task) => task.completed
+  ).length || 0;
 
-    const completedTasks =
-      tasks.data?.filter(
-        (task) => task.completed
-      ).length || 0;
+const totalTasks =
+  tasks.data?.length || 0;
 
-    const totalTasks =
-      tasks.data?.length || 0;
+const progress =
+  totalTasks > 0
+    ? Math.round(
+        (completedTasks / totalTasks) * 100
+      )
+    : 0;
+    
+    const resumeScore =
+  resumes.data?.[0]?.score || 0;
 
-    const progress =
-      totalTasks > 0
-        ? Math.round(
-            (completedTasks / totalTasks) * 100
-          )
-        : 0;
+const interviewScore =
+  interviews.data?.[0]?.score || 0;
+
+const careerScore = Math.round(
+  (resumeScore + interviewScore + progress) / 3
+);
 
     return Response.json({
       roadmap: roadmaps.data?.[0] || null,
       resume: resumes.data?.[0] || null,
       interview: interviews.data?.[0] || null,
+      interviewCount: interviews.count || 0,
+      roadmapCount: roadmaps.count || 0,
       jobMatcher: jobMatcher.data?.[0] || null,
       progress,
+careerScore,
     });
   } catch (error) {
     console.error(

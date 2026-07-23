@@ -104,23 +104,19 @@ if (loading) {
   );
 }
 
-  const roadmapScore =
-    dashboard?.roadmap?.score ?? 0;
-
   const resumeScore =
-    dashboard?.resume?.score ?? 0;
+  dashboard?.resume?.score ?? 0;
 
-  const careerScore =
-    Math.round(
-      (roadmapScore + resumeScore) / 2
-    );
+const careerScore =
+  dashboard?.careerScore ?? 0;
 
-  const targetRole =
-    dashboard?.roadmap?.role ??
-    "Not Set";
+const targetRole =
+  dashboard?.roadmap?.roadmap?.title ??
+  dashboard?.roadmap?.career_goal ??
+  "Not Set";
 
   const interviewCount =
-    dashboard?.interview ? 1 : 0;
+  dashboard?.interviewCount ?? 0;
 
   const progress =
     dashboard?.progress ?? 0;

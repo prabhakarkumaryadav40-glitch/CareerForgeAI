@@ -1,135 +1,144 @@
-import OpenAI from "openai";
-import { supabaseServer } from "@/lib/supabase-server";
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { buildRoadmapPrompt } from "@/lib/roadmapPrompt";
 
-const openai = new OpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-export async function POST(req: Request) {
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+type GenerateRoadmapBody = {
+  userId: string;
+  careerGoal: string;
+  currentLevel: string;
+  timeframe: string;
+  hoursPerWeek: number;
+  preferredLanguage: string;
+};
+
+type RoadmapResponse = {
+  title: string;
+  overview: string;
+  estimatedDuration: string;
+  difficulty: string;
+  phases: {
+    phase: number;
+    title: string;
+    duration: string;
+    description: string;
+    skills: string[];
+    resources: {
+      title: string;
+      type: string;
+      url: string;
+    }[];
+    projects: {
+      title: string;
+      description: string;
+    }[];
+  }[];
+};
+
+function extractJSON(text: string): any {
   try {
+    return JSON.parse(text);
+  } catch {}
+
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+
+  if (start === -1 || end === -1) {
+    throw new Error("No JSON object found.");
+  }
+
+  return JSON.parse(text.slice(start, end + 1));
+}
+
+function validateRoadmap(data: any): RoadmapResponse {
+  if (!data.title) {
+    throw new Error("Missing roadmap title.");
+  }
+
+  if (!Array.isArray(data.phases)) {
+    throw new Error("Roadmap phases missing.");
+  }
+
+  return data as RoadmapResponse;
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body: GenerateRoadmapBody = await req.json();
+
     const {
-      targetRole,
-      skills,
       userId,
-    } = await req.json();
+      careerGoal,
+      currentLevel,
+      timeframe,
+      hoursPerWeek,
+      preferredLanguage,
+    } = body;
 
-    console.log("========== ROADMAP REQUEST ==========");
-    console.log("TARGET ROLE:", targetRole);
-    console.log("SKILLS:", skills);
-    console.log("USER ID RECEIVED:", userId);
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User ID is required." },
+        { status: 400 }
+      );
+    }
 
-    const completion =
-      await openai.chat.completions.create({
-        model: "openai/gpt-oss-20b:free",
+    if (!careerGoal) {
+      return NextResponse.json(
+        { error: "Career goal is required." },
+        { status: 400 }
+      );
+    }
+
+    const prompt = buildRoadmapPrompt({
+      careerGoal,
+      currentLevel,
+      timeframe,
+      hoursPerWeek,
+      preferredLanguage,
+    });
+    
+        const response = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer":
+          process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+        "X-Title": "AI Career Roadmap Generator",
+      },
+      body: JSON.stringify({
+        model:
+  process.env.OPENROUTER_MODEL ||
+  "deepseek/deepseek-chat-v3-0324",
+        temperature: 0.4,
         messages: [
           {
             role: "system",
-            content: `
-You are an expert career coach.
-
-Generate ONLY a concise 3-month learning roadmap.
-
-Rules:
-- Use plain text only
-- No markdown tables
-- No HTML tags
-
-Format:
-
-Month 1
-• Skill 1
-• Skill 2
-• Skill 3
-• Skill 4
-
-Month 2
-• Skill 1
-• Skill 2
-• Skill 3
-• Skill 4
-
-Month 3
-• Skill 1
-• Skill 2
-• Skill 3
-• Skill 4
-`,
+            content:
+              "You are an expert AI career mentor. Always return ONLY valid JSON with no markdown, no explanations, and no code fences.",
           },
           {
             role: "user",
-            content: `
-Target Role: ${targetRole}
-Current Skills: ${skills}
-`,
+            content: prompt,
           },
         ],
-        temperature: 0.7,
-        max_tokens: 500,
-      });
-
-    const roadmap =
-      completion.choices[0].message.content || "";
-
-    console.log("ROADMAP GENERATED");
-
-    const skillList = skills
-      .toLowerCase()
-      .split(",")
-      .map((skill: string) => skill.trim());
-
-    let score = 20;
-
-    const importantSkills = [
-      "python",
-      "sql",
-      "git",
-      "react",
-      "javascript",
-      "machine learning",
-      "dsa",
-    ];
-
-    importantSkills.forEach((skill) => {
-      if (skillList.includes(skill)) {
-        score += 10;
-      }
+      }),
     });
 
-    score = Math.min(score, 100);
+    if (!response.ok) {
+      const errorText = await response.text();
 
-    console.log("CALCULATED SCORE:", score);
-    console.log("INSERTING USER ID:", userId);
+      console.error("OpenRouter Error:", errorText);
 
-    const {
-  data: roadmapData,
-  error,
-} = await supabaseServer
-      .from("roadmaps")
-      .insert([
+      return NextResponse.json(
         {
-          role: targetRole,
-          skills,
-          roadmap,
-          score,
-          user_id: userId,
-        },
-      ])
-      .select()
-      .single();
-
-    console.log("ROADMAP INSERT RESULT:", roadmapData);
-    console.log("ROADMAP INSERT ERROR:", error);
-
-    if (error) {
-      console.error(
-        "Roadmap Save Error:",
-        error
-      );
-
-      return Response.json(
-        {
-          error,
+          error: "Failed to generate roadmap.",
         },
         {
           status: 500,
@@ -137,65 +146,78 @@ Current Skills: ${skills}
       );
     }
 
-    if (roadmapData) {
-      const tasks = roadmap
-        .split("\n")
-        .filter((line) =>
-          line.trim().startsWith("•")
-        )
-        .map((line) => ({
-          task: line
-            .replace("•", "")
-            .trim(),
-          completed: false,
-          roadmap_id: roadmapData.id,
-          user_id: userId,
-        }));
+    const completion = await response.json();
 
-      console.log(
-        "GENERATED TASKS:",
-        tasks
-      );
+    const aiContent =
+      completion?.choices?.[0]?.message?.content ?? "";
 
-      if (tasks.length > 0) {
-        const {
-          error: taskError,
-        } = await supabaseServer
-          .from("roadmap_tasks")
-          .insert(tasks);
-
-        console.log(
-          "TASK INSERT ERROR:",
-          taskError
-        );
-
-        if (taskError) {
-          return Response.json(
-            {
-              error: taskError,
-            },
-            {
-              status: 500,
-            }
-          );
+    if (!aiContent) {
+      return NextResponse.json(
+        {
+          error: "AI returned an empty response.",
+        },
+        {
+          status: 500,
         }
-      }
+      );
     }
 
-    return Response.json({
-      roadmap,
-      score,
-    });
-  } catch (error) {
-    console.error(
-      "GENERATE ROADMAP ERROR:",
-      error
-    );
+    const parsedRoadmap = extractJSON(aiContent);
 
-    return Response.json(
+const roadmap = validateRoadmap(parsedRoadmap);
+
+console.log("Roadmap created successfully");
+
+    // Save roadmap
+
+const { data: savedRoadmap, error: roadmapError } =
+  await supabase
+    .from("roadmaps")
+    .insert({
+      user_id: userId,
+      career_goal: careerGoal,
+      current_level: currentLevel,
+      timeframe,
+      hours_per_week: hoursPerWeek,
+      preferred_language: preferredLanguage,
+      roadmap,
+    })
+    .select()
+    .single();
+
+if (roadmapError) {
+  console.error("Supabase Error:", roadmapError);
+
+  return NextResponse.json(
+    {
+      error: "Failed to save roadmap.",
+    },
+    {
+      status: 500,
+    }
+  );
+}
+
+return NextResponse.json(
+  {
+    success: true,
+    roadmap,
+    id: savedRoadmap.id,
+  },
+  {
+    status: 200,
+  }
+);
+
+  } catch (error) {
+    console.error("Generate Roadmap Error:", error);
+
+    return NextResponse.json(
       {
         error:
-          "Failed to generate roadmap",
+          error instanceof Error
+            ? error.message
+            : "Internal Server Error",
       },
       {
         status: 500,
@@ -203,5 +225,3 @@ Current Skills: ${skills}
     );
   }
 }
-
-

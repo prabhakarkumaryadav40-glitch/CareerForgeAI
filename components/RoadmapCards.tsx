@@ -1,35 +1,64 @@
 interface RoadmapCardsProps {
-  roadmap: string;
+  roadmap: any;
 }
 
 export default function RoadmapCards({
   roadmap,
 }: RoadmapCardsProps) {
-  const months = roadmap
-    .split(/Month \d+/)
-    .filter(Boolean);
+  if (!roadmap?.phases) {
+    return null;
+  }
 
   return (
-    <div className="grid md:grid-cols-3 gap-6 mt-6">
-      {months.map((month, index) => (
+    <div className="grid md:grid-cols-2 gap-6 mt-6">
+      {roadmap.phases.map((phase: any) => (
         <div
-          key={index}
+          key={phase.phase}
           className="bg-slate-800 rounded-xl p-6 shadow-lg"
         >
-          <h3 className="text-xl font-bold mb-4 text-blue-400">
-            Month {index + 1}
+          <h3 className="text-xl font-bold text-blue-400">
+            Phase {phase.phase}
           </h3>
 
-          <ul className="space-y-2">
-            {month
-              .split("\n")
-              .filter((line) => line.trim())
-              .map((line, i) => (
-                <li key={i}>
-                  ✅ {line.replace("•", "").trim()}
-                </li>
-              ))}
-          </ul>
+          <h4 className="text-lg font-semibold mt-2">
+            {phase.title}
+          </h4>
+
+          <p className="text-gray-400 mt-2">
+            {phase.description}
+          </p>
+
+          <div className="mt-4">
+            <h5 className="font-semibold">
+              Skills
+            </h5>
+
+            <ul className="list-disc ml-5 mt-2">
+              {phase.skills.map(
+                (skill: string, index: number) => (
+                  <li key={index}>
+                    {skill}
+                  </li>
+                )
+              )}
+            </ul>
+          </div>
+
+          <div className="mt-4">
+            <h5 className="font-semibold">
+              Projects
+            </h5>
+
+            <ul className="list-disc ml-5 mt-2">
+              {phase.projects.map(
+                (project: any, index: number) => (
+                  <li key={index}>
+                    {project.title}
+                  </li>
+                )
+              )}
+            </ul>
+          </div>
         </div>
       ))}
     </div>
